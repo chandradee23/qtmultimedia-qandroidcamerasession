@@ -286,14 +286,35 @@ void QAndroidCameraSession::adjustViewfinderSize(const QSize &captureSize, bool 
     } else {
         // search for viewfinder resolution with the same aspect ratio
         const qreal aspectRatio = qreal(captureSize.width()) / qreal(captureSize.height());
-        QList<QSize> previewSizes = m_camera->getSupportedPreviewSizes();
-        for (int i = previewSizes.count() - 1; i >= 0; --i) {
+
+        QList<QSize> previewSizes = m_camera->getSupportedPreviewSizes();        
+	for (int i = previewSizes.count() - 1; i >= 0; --i) {
             const QSize &size = previewSizes.at(i);
-            if (qAbs(aspectRatio - (qreal(size.width()) / size.height())) < 0.01) {
-                adjustedViewfinderResolution = size;
+            /*if (qAbs(aspectRatio - (qreal(size.width()) / size.height())) < 0.01) {
+		adjustedViewfinderResolution = size;
                 break;
-            }
+            }*/
+	    if (qAbs(aspectRatio - (qreal(size.width()) / size.height())) > 0.01) {
+		previewSizes.removeAt(i);                
+	    }		
         }
+	//Take the resolution with the closest area
+        const int area = captureSize.width() * captureSize.height();
+	if(previewSizes.count()>0){			
+		const QSize &size_0 = previewSizes.at(0);
+		int best_match_area_diff=qAbs(area - (size_0.width() * size_0.height()));
+		adjustedViewfinderResolution = size_0;
+		for (int i = 1; i <previewSizes.count() - 1; ++i) {     
+ 	    	    const QSize &size = previewSizes.at(i);
+        	    if (best_match_area_diff > qAbs(area -(size.width() * size.height()))) {
+			best_match_area_diff = qAbs(area -(size.width() * size.height()));
+			adjustedViewfinderResolution = size;
+			if(best_match_area_diff == 0)			
+        	        	break;
+        	    }		
+        	}
+	}
+	
 
         if (!adjustedViewfinderResolution.isValid()) {
             qWarning("Cannot find a viewfinder resolution matching the capture aspect ratio.");
